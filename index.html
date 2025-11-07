@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+      <script>
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        let employees = JSON.parse(localStorage.getItem('employees')) || [];
+        let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+        let loggedIn = false;
+        const loginTimeout = 30 * 60 * 1000;
+
+        window.onload = () => {
+            displayOrders();
+            displaySavedEmployeeDetails();
+            displayInventory();
+        };
+
+        function showSection(id) {
+            if (id === 'employeeLogin' && loggedIn) {
+                alert('You are already logged in.');
+                return;
+            }
+            document.querySelectorAll('.container > div').forEach(div => div.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+        }
+
+        function validatePhone(phone) {
+            return /^\d{10}$/.test(phone);
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function addOrder() {
+            const customerName = document.getElementById('customerName').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const selectedItem = document.getElementById('orderItem').value;
+            const quantity = parseInt(document.getElementById('orderQuantity').value);
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const orderDate = new Date().toLocaleString();
+
+            if (!customerName || !validatePhone(phoneNumber) || !selectedItem || quantity < 1 || !paymentMethod) {
+                alert('Please enter valid order details:\n- Valid 10-digit phone number\n- All fields required');
+                return;
+            }
+
+            const itemDetails = selectedItem.split(' - ₹');
+            const itemName = itemDetails[0];
+            const itemPrice = parseInt(itemDetails[1]);
+            var totalCost = itemPrice * quantity;
+
+            const order = { 
+                id: Date.now(), 
+                customerName, 
+                phoneNumber, 
+                item: itemName, 
+                quantity, 
+                paymentMethod, 
+                orderDate, 
+                totalCost: $totalCost 
+            };
+            
+            orders.push(order);
+            localStorage.setItem('orders', JSON.stringify(orders));
+            alert('Order placed successfully!');
+            displayOrders();
+            document.getElementById('placeOrder').querySelector('form')?.reset();
+        }
+
+        function deleteOrder(id) {
+            orders = orders.filter(order => order.id !== id);
+            localStorage.setItem('orders', JSON.stringify(orders));
+            displayOrders();
+        }
+
+        function displayOrders() {
+            const orderList = document.getElementById('orderList');
+            orderList.innerHTML = '';
+            orders.forEach(order => {
+                const li = document.createElement('li');
+                li.className = 'order-item';
+                li.innerHTML = 
+                    `<div class="order-details">
+                        <div><strong>Name:</strong> ${order.customerName}</div>
+                        <div><strong>Phone:</strong> ${order.phoneNumber}</div>
+                        <div><strong>Item:</strong> ${order.item} (x${order.quantity})</div>
+                        <div><strong>Payment:</strong> ${order.paymentMethod}</div>
+                        <div><strong>Date:</strong> ${order.orderDate}</div>
+                        <div><strong>Total Cost:</strong> ${order.totalCost}</div>
+                    </div>
+                    <div>
+                        <button class="action-btn" onclick="deleteOrder(${order.id})">Delete</button>
+                    </div>`
+                ;
+                orderList.appendChild(li);
+            });
+        }
+
+        function employeeLogin() {
+            const employeeId = document.getElementById('employeeId').value.trim();
+            const employeePassword = document.getElementById('employeePassword').value;
+            const validCredentials = { 'BATCH13': '1317' };
+            const message = document.getElementById('loginMessage');
+
+            if (validCredentials[employeeId] === employeePassword) {
+                loggedIn = true;
+                message.className = 'success';
+                message.textContent = 'Login successful! Redirecting...';
+                setTimeout(() => {
+                    showSection('employeeDashboard');
+                    document.getElementById('logoutButton').style.display = 'inline-block';
+                    document.getElementById('loginButton').style.display = 'none';
+                    setTimeout(logout, loginTimeout);
+                }, 1000);
+            } else {
+                message.className = 'error';
+                message.textContent = 'Incorrect ID or password.';
+            }
+        }
+
+        function logout() {
+            loggedIn = false;
+            document.getElementById('logoutButton').style.display = 'none';
+            document.getElementById('loginButton').style.display = 'inline-block';
+            showSection('employeeLogin');
+            alert('You have been logged out.');
+        }
+
+        function submitAttendance() {
+            const employeeName = document.getElementById('employeeName').value.trim();
+            const attendanceDate = document.getElementById('attendanceDate').value;
+            const attendanceStatus = document.getElementById('attendanceStatus').value;
+            const workingHours = parseInt(document.getElementById('workingHours').value);
+
+            if (!employeeName || !attendanceDate || isNaN(workingHours) || workingHours < 0 || workingHours > 24) {
+                alert('Please enter valid attendance details:\n- All fields required\n- Hours between 0-24');
+                return;
+            }
+
+            const attendanceMessage = document.getElementById('attendanceMessage');
+            attendanceMessage.innerHTML = 
+                `<div><strong>Name:</strong> ${employeeName}</div>
+                <div><strong>Date:</strong> ${attendanceDate}</div>
+                <div><strong>Status:</strong> ${attendanceStatus}</div>
+                <div><strong>Hours:</strong> ${workingHours}</div>`
+            ;
+            attendanceMessage.className = 'success';
+        }
+
+        function saveEmployeeDetails() {
+            const employeeId = document.getElementById('employeeIdDetails').value.trim();
+            const employeeName = document.getElementById('employeeNameDetails').value.trim();
+            const employeeEmail = document.getElementById('employeeEmailDetails').value.trim();
+            const employeePhone = document.getElementById('employeePhoneDetails').value.trim();
+            const employeeAddress = document.getElementById('employeeAddressDetails').value.trim();
+            const message = document.getElementById('employeeDetailsMessage');
+
+            if (!employeeId || !employeeName || !validateEmail(employeeEmail) || !validatePhone(employeePhone) || !employeeAddress) {
+                message.className = 'error';
+                message.textContent = 'Please enter valid details:\n- Valid email\n- 10-digit phone';
+                return;
+            }
+
+            if (employees.some(emp => emp.employeeId === employeeId)) {
+                message.className = 'error';
+                message.textContent = 'Employee ID already exists!';
+                return;
+            }
+
+            employees.push({ employeeId, employeeName, employeeEmail, employeePhone, employeeAddress });
+            localStorage.setItem('employees', JSON.stringify(employees));
+            message.className = 'success';
+            message.textContent = 'Employee details saved successfully!';
+            displaySavedEmployeeDetails();
+        }
+
+        function displaySavedEmployeeDetails() {
+            const savedEmployeeDetailsList = document.getElementById('savedEmployeeDetails');
+            savedEmployeeDetailsList.innerHTML = '';
+            
+            employees.forEach(employee => {
+                const li = document.createElement('li');
+                li.className = 'employee-item';
+                li.innerHTML = 
+                    `<div class="employee-info">
+                        <span class="employee-label">Employee ID:</span>
+                        <span class="employee-value">${employee.employeeId}</span>
+                        <span class="employee-label">Name:</span>
+                        <span class="employee-value">${employee.employeeName}</span>
+                        <span class="employee-label">Email:</span>
+                        <span class="employee-value">${employee.employeeEmail}</span>
+                    </div>
+                    <div class="employee-info">
+                        <span class="employee-label">Phone:</span>
+                        <span class="employee-value">${employee.employeePhone}</span>
+                        <span class="employee-label">Address:</span>
+                        <span class="employee-value">${employee.employeeAddress}</span>
+                    </div>
+                    <div>
+                        <button class="delete-btn" onclick="deleteEmployee('${employee.employeeId}')">Delete</button>
+                    </div>`
+                ;
+                savedEmployeeDetailsList.appendChild(li);
+            });
+            
+            if (employees.length === 0) {
+                savedEmployeeDetailsList.innerHTML = 
+                    `<li class="employee-item" style="grid-template-columns: 1fr; text-align: center; color: #666;">
+                        No employee details saved yet
+                    </li>`
+                ;
+            }
+        }
+
+        function deleteEmployee(employeeId) {
+            if (confirm('Are you sure you want to delete this employee?')) {
+                employees = employees.filter(emp => emp.employeeId !== employeeId);
+                localStorage.setItem('employees', JSON.stringify(employees));
+                displaySavedEmployeeDetails();
+                const message = document.getElementById('employeeDetailsMessage');
+                message.className = 'success';
+                message.textContent = 'Employee deleted successfully!';
+            }
+        }
+
+        // Inventory Management Functions
+        function updateInventory() {
+            const itemName = document.getElementById('inventoryItemName').value.trim();
+            const quantity = parseInt(document.getElementById('inventoryQuantity').value);
+            const price = parseFloat(document.getElementById('inventoryPrice').value);
+
+            if (!itemName || quantity < 0 || price < 0) {
+                alert('Please enter valid inventory details.');
+                return;
+            }
+
+            const existingItem = inventory.find(item => item.name === itemName);
+            if (existingItem) {
+                existingItem.quantity += quantity; // Update quantity
+                existingItem.price = price; // Update price
+            } else {
+                inventory.push({ name: itemName, quantity, price });
+            }
+
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            displayInventory();
+            clearInventoryFields();
+        }
+
+        function displayInventory() {
+            const inventoryList = document.getElementById('inventoryList');
+            inventoryList.innerHTML = '';
+            inventory.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'inventory-item';
+                li.innerHTML = 
+                    `<div class="inventory-details">
+                        <div><strong>Item:</strong> ${item.name}</div>
+                        <div><strong>Quantity:</strong> ${item.quantity}</div>
+                        <div><strong>Price:</strong> ₹${item.price.toFixed(2)}</div>
+                    </div>
+                    <div>
+                        <button class="delete-btn" onclick="deleteInventoryItem('${item.name}')">Delete</button>
+                    </div>`
+                ;
+                inventoryList.appendChild(li);
+            });
+        }
+
+        function deleteInventoryItem(itemName) {
+            if (confirm('Are you sure you want to delete this item from inventory?')) {
+                inventory = inventory.filter(item => item.name !== itemName);
+                localStorage.setItem('inventory', JSON.stringify(inventory));
+                displayInventory();
+            }
+        }
+
+        function clearInventoryFields() {
+            document.getElementById('inventoryItemName').value = '';
+            document.getElementById('inventoryQuantity').value = '';
+            document.getElementById('inventoryPrice').value = '';
+        }
+    </script>
+  </body>
+</html>
